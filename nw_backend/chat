@@ -1,0 +1,59 @@
+# 1. 先获取token（假设登录接口）
+Invoke-WebRequest -Method Post -Uri "http://localhost:5000/api/v1/security/login" `
+  -ContentType "application/json" `
+  -Body '{"username":"admin","password":"admin","provider":"db"}'
+# 2. 提取token（假设返回JSON中有access_token字段）
+$token1 = ($response.Content | ConvertFrom-Json).access_token
+
+# 3. 调用需要认证的端点
+Invoke-WebRequest -Method Get -Uri "http://localhost:5000/api/v1/example/private" `
+  -Headers @{"Authorization"="Bearer $token"}
+
+查询数据库
+  Invoke-WebRequest -Method GET -Uri "http://localhost:5000/api/v1/group/1" `
+  -ContentType "application/json" `
+  -Headers @{"Authorization"="Bearer $token"} 
+
+  Invoke-WebRequest -Method GET -Uri "http://localhost:5000/api/v1/group/_info?q=(keys:!(permissions))" `
+  -ContentType "application/json" `
+  -Headers @{"Authorization"="Bearer $token"} 
+  
+   Invoke-WebRequest -Method GET -Uri "http://localhost:5000/api/v1/contact/2?q=(columns:!(name,address),keys:!(label_columns))" `
+  -ContentType "application/json" `
+  -Headers @{"Authorization"="Bearer $token"} 
+
+删除
+   Invoke-WebRequest -Method DELETE -Uri "http://localhost:5000/api/v1/group/4" `
+  -ContentType "application/json" `
+  -Headers @{"Authorization"="Bearer $token"} 
+
+
+保存到数据库
+  Invoke-WebRequest -Method POST -Uri "http://localhost:5000/api/v1/group/" `
+  -Body '{"name": "Friends2"}' `
+  -ContentType "application/json" `
+  -Headers @{"Authorization"="Bearer $token"}
+
+更新
+    Invoke-WebRequest -Method PUT -Uri "http://localhost:5000/api/v1/group/1" `
+  -Body '{"name": "Friends Changed"}' `
+  -ContentType "application/json" `
+  -Headers @{"Authorization"="Bearer $token"}
+
+  # 直接运行脚本
+.\api_request.ps1
+
+# 或者先加载函数再使用
+. .\api_request.ps1
+$token = Get-AuthToken
+Invoke-ApiRequest -Uri "http://localhost:5000/api/v1/group/1" -Token $token
+
+
+### 使用说明：
+1. 将上述代码保存为 .ps1 文件
+2. 直接调用 Invoke-ApiRequest 函数发起请求
+3. 函数会自动处理令牌过期情况
+### 其他建议：
+1. 生产环境中可以考虑将令牌缓存到文件
+2. 对于长时间运行的脚本，可以添加定期刷新令牌的逻辑
+3. 可以在config.py中调整 JWT_EXPIRATION_DELTA 延长令牌有效期
